@@ -7,9 +7,14 @@ const nextConfig = {
     unoptimized: true,
   },
   swcMinify: false,
-  webpack: (config) => {
-    config.resolve.alias.canvas = false
-    return config
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        canvas: false,
+      };
+    }
+    return config;
   },
   turbopack: {},
 }
