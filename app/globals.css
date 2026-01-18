@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Kuttab color palette - Modern design */
+  --background: #FFFFFF;
+  --foreground: #0C2C55;
+  --card: #FFFFFF;
+  --card-foreground: #0C2C55;
+  --popover: #FFFFFF;
+  --popover-foreground: #0C2C55;
+  --primary: #0C2C55;
+  --primary-foreground: #FFFFFF;
+  --secondary: #629FAD;
+  --secondary-foreground: #FFFFFF;
+  --muted: #F0F0F0;
+  --muted-foreground: #666666;
+  --accent: #629FAD;
+  --accent-foreground: #FFFFFF;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E5E5E5;
+  --input: #F5F5F5;
+  --ring: #0C2C55;
+  --chart-1: #0C2C55;
+  --chart-2: #629FAD;
+  --chart-3: #629FAD;
+  --chart-4: #629FAD;
+  --chart-5: #0C2C55;
+  --radius: 0.5rem;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0C2C55;
+  --sidebar-primary: #0C2C55;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #629FAD;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #E5E5E5;
+  --sidebar-ring: #0C2C55;
+}
+
+.dark {
+  --background: #0C2C55;
+  --foreground: #FFFFFF;
+  --card: #162A47;
+  --card-foreground: #FFFFFF;
+  --popover: #162A47;
+  --popover-foreground: #FFFFFF;
+  --primary: #629FAD;
+  --primary-foreground: #0C2C55;
+  --secondary: #629FAD;
+  --secondary-foreground: #0C2C55;
+  --muted: #2A3F54;
+  --muted-foreground: #CCCCCC;
+  --accent: #629FAD;
+  --accent-foreground: #0C2C55;
+  --destructive: #EF4444;
+  --destructive-foreground: #0C2C55;
+  --border: #2A3F54;
+  --input: #162A47;
+  --ring: #629FAD;
+  --chart-1: #629FAD;
+  --chart-2: #629FAD;
+  --chart-3: #0C2C55;
+  --chart-4: #629FAD;
+  --chart-5: #629FAD;
+  --sidebar: #0C2C55;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #629FAD;
+  --sidebar-primary-foreground: #0C2C55;
+  --sidebar-accent: #629FAD;
+  --sidebar-accent-foreground: #0C2C55;
+  --sidebar-border: #2A3F54;
+  --sidebar-ring: #629FAD;
+}
+
+@theme inline {
+  --font-sans: "Geist", "Geist Fallback";
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Design-inspired tokens and utility classes derived from the attached image */
+:root {
+  --brand-accent: linear-gradient(90deg, color-mix(in oklch, var(--primary) 40%, white 10%), color-mix(in oklch, var(--accent) 60%, white 10%));
+}
+
+.hero-illustration {
+  border-radius: 1.25rem;
+  box-shadow: 0 10px 30px rgba(16,24,40,0.06);
+}
+
+.k-heading {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--color-foreground), color-mix(in oklch, var(--color-primary) 40%, var(--color-foreground) 60%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Smooth page-level transitions */
+.page-animate {
+  animation: pageFade 360ms cubic-bezier(.2,.9,.2,1);
+}
+
+@keyframes pageFade {
+  from { opacity: 0; transform: translateY(6px) scale(0.998); filter: blur(2px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+/* Subtle card hover that matches the illustration's soft lift */
+.soft-lift {
+  transition: transform .22s cubic-bezier(.2,.9,.2,1), box-shadow .22s;
+}
+.soft-lift:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(16,24,40,0.08); }
+
+/* Smaller helpers for CTA buttons to get the rounded pill look */
+.btn-pill { @apply rounded-full px-6 py-2 font-medium shadow-sm; }
+
