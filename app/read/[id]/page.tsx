@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 import { useParams, useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import PdfViewerReactPdf from "@/components/pdf-viewer-reactpdf"
 import { NotesPanel } from "@/components/notes-panel"
 import { BookmarksPanel } from "@/components/bookmarks-panel"
@@ -12,57 +13,44 @@ import { ResourcesPanel } from "@/components/resources-panel"
 import { ReadingGoalsPanel } from "@/components/reading-goals-panel"
 import { MemoizationPanel } from "@/components/memorization-panel"
 
+import { 
+  BookOpen, FileText, Bookmark, 
+  Languages, Target, Mic, 
+  ChevronLeft, Menu, StickyNote 
+} from "lucide-react"
+
 export default function ReadPage() {
   const params = useParams()
   const router = useRouter()
   const bookId = params.id as string
 
-  // Stable Supabase Client
   const supabase = useMemo(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL! || "https://qyfiafodyqmewuijigfm.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5ZmlhZm9keXFtZXd1aWppZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2ODEyODksImV4cCI6MjA4NDI1NzI4OX0.EEQgOLSIjeEA1pv3dCD48M_QgN44EgesTe_HLftbsHs"
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   ), [])
 
-  // Component State
   const [book, setBook] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [panelMenuOpen, setPanelMenuOpen] = useState(false)
-  const [pageStartTime, setPageStartTime] = useState<number>(Date.now())
+  
+  // States for PDF Overlay Indicators
+  const [hasBookmark, setHasBookmark] = useState(false)
+  const [hasNotes, setHasNotes] = useState(false)
 
-  // Proxy external URLs (Archive.org/Drive) through our local API to bypass CORS
-  const proxiedPdfUrl = useMemo(() => {
-    if (!book?.pdf_url) return ""
-    // If it's already a local path or proxied, don't double-proxy
-    if (book.pdf_url.startsWith('/') || book.pdf_url.includes('proxy-pdf')) return book.pdf_url
-    return `/api/proxy-pdf?url=${encodeURIComponent(book.pdf_url)}`
-  }, [book?.pdf_url])
-
-  // Initial Data Fetch
   useEffect(() => {
     async function initSession() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return router.push("/auth/login")
 
-        // Fetch book and last session in parallel
         const [bookData, sessionData] = await Promise.all([
           supabase.from("books").select("*").eq("id", bookId).single(),
-          supabase.from("reading_sessions")
-            .select("current_page")
-            .eq("book_id", bookId)
-            .eq("user_id", user.id)
-            .order("updated_at", { ascending: false })
-            .limit(1)
-            .maybeSingle()
+          supabase.from("reading_sessions").select("current_page").eq("book_id", bookId).eq("user_id", user.id).maybeSingle()
         ])
 
         if (bookData.error) throw bookData.error
         setBook(bookData.data)
-        
-        if (sessionData.data) {
-          setCurrentPage(sessionData.data.current_page)
-        }
+        if (sessionData.data) setCurrentPage(sessionData.data.current_page)
       } catch (err) {
         console.error("Error loading reader:", err)
         router.push("/dashboard")
@@ -70,149 +58,136 @@ export default function ReadPage() {
         setLoading(false)
       }
     }
-
     initSession()
   }, [bookId, supabase, router])
 
-  // Save Progress Logic
-  const handlePageChange = useCallback(async (newPage: number) => {
-    const timeSpentSeconds = Math.round((Date.now() - pageStartTime) / 1000)
-    
-    // Update local state immediately for snappy UI
-    setCurrentPage(newPage)
-    setPageStartTime(Date.now())
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    // Using UPSERT logic to handle session tracking
-    const { data: existingSession } = await supabase
-      .from("reading_sessions")
-      .select("id, duration_minutes")
-      .eq("book_id", bookId)
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    if (existingSession) {
-      const totalMinutes = (existingSession.duration_minutes || 0) + (timeSpentSeconds / 60)
-      await supabase
-        .from("reading_sessions")
-        .update({ 
-          current_page: newPage, 
-          duration_minutes: totalMinutes,
-          updated_at: new Date().toISOString() 
-        })
-        .eq("id", existingSession.id)
-    } else {
-      await supabase.from("reading_sessions").insert([{
-        user_id: user.id,
-        book_id: bookId,
-        current_page: newPage,
-        duration_minutes: timeSpentSeconds / 60
-      }])
+  // Effect to check for page indicators
+  useEffect(() => {
+    async function checkIndicators() {
+      const { data: bmarks } = await supabase.from("bookmarks").select("id").eq("book_id", bookId).eq("page_number", currentPage).limit(1)
+      const { data: notes } = await supabase.from("notes").select("id").eq("book_id", bookId).eq("page_number", currentPage).limit(1)
+      
+      setHasBookmark((bmarks?.length ?? 0) > 0)
+      setHasNotes((notes?.length ?? 0) > 0)
     }
-  }, [bookId, pageStartTime, supabase])
+    if (bookId) checkIndicators()
+  }, [currentPage, bookId, supabase])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-muted-foreground animate-pulse">Loading your library...</p>
-        </div>
-      </div>
-    )
-  }
+  const handlePageChange = useCallback((newPage: number) => {
+    setCurrentPage(newPage)
+  }, [])
 
-  if (!book) return null
+  const proxiedPdfUrl = useMemo(() => {
+    if (!book?.pdf_url) return ""
+    return book.pdf_url.startsWith('/') || book.pdf_url.includes('proxy-pdf') 
+      ? book.pdf_url 
+      : `/api/proxy-pdf?url=${encodeURIComponent(book.pdf_url)}`
+  }, [book?.pdf_url])
+
+  if (loading) return <div className="h-screen flex items-center justify-center">Loading...</div>
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation Header */}
-      <nav className="bg-card border-b border-border sticky top-0 z-40 shadow-sm">
-        <div className="mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => router.push("/dashboard")} 
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
-            >
-              ← <span className="hidden sm:inline">Dashboard</span>
-            </button>
-            <div className="h-4 w-[1px] bg-border hidden sm:block"></div>
-            <h1 className="text-lg font-semibold text-foreground truncate max-w-[200px] sm:max-w-md">
-              {book.title}
-            </h1>
-          </div>
-          <div className="px-3 py-1 bg-muted rounded-full text-xs font-medium text-muted-foreground">
-            Page {currentPage} {book.total_pages ? `of ${book.total_pages}` : ''}
-          </div>
+    <div className="h-screen w-full flex flex-col bg-slate-50 overflow-hidden">
+      
+      {/* 1. GLOBAL HEADER */}
+      <nav className="h-14 border-b flex items-center justify-between px-6 bg-white shrink-0 z-30">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.push("/dashboard")} className="hover:bg-slate-100 p-2 rounded-full">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <h1 className="font-bold text-slate-800 truncate max-w-[300px]">{book?.title}</h1>
+        </div>
+        <div className="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full border">
+          Page {currentPage}
         </div>
       </nav>
 
-      {/* Main Content Grid */}
-      <main className="max-w-[1600px] mx-auto w-full px-4 py-4 flex-1">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
+      {/* 2. MAIN LAYOUT */}
+      <Tabs defaultValue="notes" className="flex flex-1 overflow-hidden h-full">
+        <main className="flex flex-1 flex-row overflow-hidden p-4 gap-4">
           
-          {/* PDF Viewer Section (Col 7/12) */}
-          <div className="lg:col-span-7 xl:col-span-8 flex flex-col">
-            {book.pdf_url ? (
-              <div className="bg-card rounded-xl border border-border overflow-hidden shadow-lg" style={{ height: "calc(100vh - 120px)" }}>
-                <PdfViewerReactPdf 
-                  pdfUrl={proxiedPdfUrl} 
-                  onPageChange={handlePageChange} 
-                  currentPage={currentPage}
-                />
-              </div>
-            ) : (
-              <div className="bg-card rounded-xl border border-border p-12 text-center h-[60vh] flex flex-col items-center justify-center">
-                <div className="text-4xl mb-4 text-muted-foreground">📄</div>
-                <p className="text-foreground font-medium">No PDF source found</p>
-                <p className="text-sm text-muted-foreground mt-2">Update the book details to include a valid PDF URL.</p>
-              </div>
-            )}
-          </div>
+          {/* READER SECTION (Most Space) */}
+          <section className="flex-[3] h-full flex flex-col relative min-w-0">
+            {/* PDF INDICATORS OVERLAY */}
+            <div className="absolute top-6 right-6 z-10 flex flex-col gap-2 pointer-events-none">
+              {hasBookmark && (
+                <div className="bg-orange-500 text-white p-2 rounded-bl-lg shadow-lg animate-in fade-in slide-in-from-top-2">
+                  <Bookmark size={20} fill="currentColor" />
+                </div>
+              )}
+              {hasNotes && (
+                <div className="bg-blue-600 text-white p-2 rounded-lg shadow-lg animate-in fade-in slide-in-from-top-4">
+                  <StickyNote size={20} fill="currentColor" />
+                </div>
+              )}
+            </div>
 
-          {/* Interactive Panels Section (Col 5/12) */}
-          <div className="lg:col-span-5 xl:col-span-4 flex flex-col h-full">
-            <Tabs defaultValue="resources" className="flex flex-col h-full bg-card rounded-xl border border-border shadow-md overflow-hidden" style={{ height: "calc(100vh - 120px)" }}>
-              <div className="bg-muted p-1 border-b border-border">
-                <TabsList className="w-full flex justify-start overflow-x-auto no-scrollbar bg-transparent h-auto p-0">
-                  <TabsTrigger value="resources" className="flex-1 py-2 text-xs uppercase tracking-wider">Source</TabsTrigger>
-                  <TabsTrigger value="notes" className={`flex-1 py-2 text-xs uppercase tracking-wider ${!panelMenuOpen ? "hidden md:inline-flex" : ""}`}>Notes</TabsTrigger>
-                  <TabsTrigger value="bookmarks" className={`flex-1 py-2 text-xs uppercase tracking-wider ${!panelMenuOpen ? "hidden md:inline-flex" : ""}`}>Marks</TabsTrigger>
-                  <TabsTrigger value="glossary" className={`flex-1 py-2 text-xs uppercase tracking-wider ${!panelMenuOpen ? "hidden md:inline-flex" : ""}`}>Vocab</TabsTrigger>
-                  <TabsTrigger value="goals" className={`flex-1 py-2 text-xs uppercase tracking-wider ${!panelMenuOpen ? "hidden md:inline-flex" : ""}`}>Goal</TabsTrigger>
-                  <TabsTrigger value="memorize" className={`flex-1 py-2 text-xs uppercase tracking-wider ${!panelMenuOpen ? "hidden md:inline-flex" : ""}`}>A.I.</TabsTrigger>
-                  <button 
-                    onClick={() => setPanelMenuOpen(!panelMenuOpen)}
-                    className="md:hidden px-3 text-muted-foreground hover:text-foreground"
-                  >
-                    {panelMenuOpen ? "✕" : "☰"}
-                  </button>
-                </TabsList>
-              </div>
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <PdfViewerReactPdf 
+                pdfUrl={proxiedPdfUrl} 
+                onPageChange={handlePageChange} 
+                currentPage={currentPage}
+              />
+            </div>
+          </section>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <TabsContent value="resources" className="m-0 p-4"><ResourcesPanel bookId={bookId} /></TabsContent>
-                <TabsContent value="notes" className="m-0 p-4"><NotesPanel bookId={bookId} currentPage={currentPage} bookTitle={book.title} /></TabsContent>
-                <TabsContent value="bookmarks" className="m-0 p-4"><BookmarksPanel bookId={bookId} onBookmarkClick={handlePageChange} /></TabsContent>
-                <TabsContent value="glossary" className="m-0 p-4"><GlossaryPanel bookId={bookId} /></TabsContent>
-                <TabsContent value="goals" className="m-0 p-4"><ReadingGoalsPanel bookId={bookId} totalPages={book.total_pages} /></TabsContent>
-                <TabsContent value="memorize" className="m-0 p-4"><MemoizationPanel bookId={bookId} /></TabsContent>
-              </div>
-            </Tabs>
-          </div>
-        </div>
-      </main>
+          {/* INTERACTIVE PANEL SECTION (Sidebar on top) */}
+          <aside className="hidden lg:flex flex-[1] max-w-[420px] h-full flex-col shrink-0 overflow-hidden">
+            <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+              
+              {/* NAVIGATION ON TOP OF PANEL */}
+              <TabsList className="flex w-full h-14 bg-slate-50 border-b rounded-none p-1 gap-1">
+                <PanelIconTrigger value="resources" icon={<BookOpen size={18} />} />
+                <PanelIconTrigger value="notes" icon={<FileText size={18} />} />
+                <PanelIconTrigger value="bookmarks" icon={<Bookmark size={18} />} />
+                <PanelIconTrigger value="glossary" icon={<Languages size={18} />} />
+                <PanelIconTrigger value="goals" icon={<Target size={18} />} />
+                <PanelIconTrigger value="memorize" icon={<Mic size={18} />} />
+              </TabsList>
 
-      <style jsx global>{`
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
-      `}</style>
+              <div className="flex-1 overflow-y-auto">
+                <TabsContent value="resources" className="m-0 outline-none"><ResourcesPanel bookId={bookId} /></TabsContent>
+                <TabsContent value="notes" className="m-0 outline-none p-4"><NotesPanel bookId={bookId} currentPage={currentPage} bookTitle={book?.title} /></TabsContent>
+                <TabsContent value="bookmarks" className="m-0 outline-none p-4"><BookmarksPanel bookId={bookId} onBookmarkClick={handlePageChange} /></TabsContent>
+                <TabsContent value="glossary" className="m-0 outline-none p-4"><GlossaryPanel bookId={bookId} /></TabsContent>
+                <TabsContent value="goals" className="m-0 outline-none p-4"><ReadingGoalsPanel bookId={bookId} totalPages={book?.total_pages} /></TabsContent>
+                <TabsContent value="memorize" className="m-0 outline-none p-4"><MemoizationPanel bookId={bookId} /></TabsContent>
+              </div>
+            </div>
+          </aside>
+        </main>
+      </Tabs>
     </div>
+  )
+}
+
+function PanelIconTrigger({ value, icon }: { value: string, icon: React.ReactNode }) {
+  return (
+    <TabsTrigger 
+      value={value} 
+      className="flex-1 h-full rounded-md transition-all
+                 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-600
+                 text-slate-500 hover:text-slate-800"
+    >
+      {icon}
+    </TabsTrigger>
+  )
+}
+
+function MobilePanelContent({ bookId, currentPage, bookTitle, onPageChange }: any) {
+  return (
+    <Tabs defaultValue="notes" className="flex flex-col h-full bg-white">
+      <TabsList className="grid grid-cols-6 h-12 bg-slate-50 border-b shrink-0">
+        <TabsTrigger value="resources" className="data-[state=active]:bg-white"><BookOpen size={18} /></TabsTrigger>
+        <TabsTrigger value="notes" className="data-[state=active]:bg-white"><FileText size={18} /></TabsTrigger>
+        <TabsTrigger value="bookmarks" className="data-[state=active]:bg-white"><Bookmark size={18} /></TabsTrigger>
+        <TabsTrigger value="glossary" className="data-[state=active]:bg-white"><Languages size={18} /></TabsTrigger>
+        <TabsTrigger value="goals" className="data-[state=active]:bg-white"><Target size={18} /></TabsTrigger>
+        <TabsTrigger value="memorize" className="data-[state=active]:bg-white"><Mic size={18} /></TabsTrigger>
+      </TabsList>
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Contents same as Desktop TabsContent */}
+      </div>
+    </Tabs>
   )
 }
