@@ -48,7 +48,7 @@ export default function Home() {
               </h1>
               
               <p className="text-base md:text-lg opacity-95">
-                A thoughtfully designed platform for serious Islamic scholars and learners to read, annotate, and master Islamic texts.
+                A thoughtfully designed platform for serious students of knowledge and learners to read, annotate, and master Islamic texts.
               </p>
 
               {/* Search bar */}
@@ -66,7 +66,7 @@ export default function Home() {
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2">
-                {["Quranic Studies", "Hadith", "Islamic Law", "Theology"].map((tag) => (
+                {["Quranic Studies", "Hadith", "Fiqh", "Aqeedah"].map((tag) => (
                   <button
                     key={tag}
                     className="px-3 py-1 md:px-4 md:py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs md:text-sm transition-colors"
@@ -82,7 +82,7 @@ export default function Home() {
                   onClick={() => router.push("/auth/signup")}
                   className="px-6 md:px-8 py-2.5 md:py-3 bg-white text-primary rounded-lg hover:opacity-90 transition-opacity font-medium text-sm md:text-base flex items-center justify-center gap-2"
                 >
-                  Start Learning <ArrowRight className="w-4 h-4" />
+                  Get started <ArrowRight className="w-4 h-4" />
                 </button>
                 <button 
                   onClick={() => setShowVideo(true)}
@@ -101,7 +101,7 @@ export default function Home() {
                     ))}
                   </div>
                   <p className="text-xs md:text-sm">
-                    <span className="font-bold">Join thousands</span> of learners
+                    <span className="font-bold">Join thousands</span> of readers
                   </p>
                 </div>
               </div>
@@ -114,7 +114,7 @@ export default function Home() {
                   <div className="w-20 h-20 bg-white/20 rounded-full mx-auto flex items-center justify-center">
                     <BookOpen className="w-10 h-10 text-white" />
                   </div>
-                  <p className="text-white font-semibold text-sm">Islamic Knowledge Platform</p>
+                  <p className="text-white font-semibold text-sm">Read With Purpose</p>
                 </div>
               </div>
             </div>
@@ -162,7 +162,7 @@ export default function Home() {
               {
                 icon: Users,
                 title: "Community",
-                desc: "Share resources, insights, and reflections with fellow scholars and learners worldwide."
+                desc: "Share resources, insights, and reflections with fellow readers worldwide."
               }
             ].map((feature, i) => (
               <div key={i} className="bg-white rounded-xl p-6 md:p-8 border border-border hover:border-secondary hover:shadow-lg transition-all group">
@@ -195,16 +195,16 @@ export default function Home() {
                 desc: "Embark on a meaningful Islamic learning journey with structured resources and community support."
               },
               {
-                title: "Educators",
-                desc: "Organize curriculum, track student progress, and share curated Islamic resources seamlessly."
-              },
-              {
                 title: "Memorization Seekers",
                 desc: "Record recitations, track memorization progress, and verify accuracy with original texts."
               },
               {
                 title: "Arabic Enthusiasts",
                 desc: "Master Arabic vocabulary, study classical texts, and understand linguistic nuances deeply."
+              },
+               {
+                title: "Researchers",
+                desc: "Access materials across platforms, work on any device, and engage your books anywhere."
               }
             ].map((user, i) => (
               <div key={i} className="bg-white/10 backdrop-blur rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
@@ -298,9 +298,9 @@ export default function Home() {
       {/* CTA Section */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 bg-primary text-primary-foreground">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6">Begin Your Learning Journey</h2>
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6">Get Started With Kuttab</h2>
           <p className="text-base md:text-lg opacity-95 mb-8 md:mb-12 max-w-2xl mx-auto">
-            Join thousands of Islamic scholars and learners transforming their understanding of Islamic knowledge through purposeful reading.
+            Join thousands of Readers transforming their understanding of Islamic knowledge through purposeful reading.
           </p>
           <button 
             onClick={() => router.push("/auth/signup")}
