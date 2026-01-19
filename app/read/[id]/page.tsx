@@ -221,14 +221,42 @@ export default function ReadPage() {
         </main>
       </Tabs>
 
+      {/* MOBILE PANEL MODAL */}
+      {activeMobileTab && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 flex items-end">
+          <div className="bg-white w-full rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="font-bold text-slate-800 capitalize">{activeMobileTab}</h2>
+              <button 
+                onClick={() => setActiveMobileTab(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-600" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {activeMobileTab === 'resources' && <ResourcesPanel bookId={bookId} />}
+              {activeMobileTab === 'notes' && <NotesPanel bookId={bookId} currentPage={currentPage} bookTitle={book?.title} />}
+              {activeMobileTab === 'bookmarks' && <BookmarksPanel bookId={bookId} onBookmarkClick={(page) => { handlePageChange(page); setActiveMobileTab(null); }} />}
+              {activeMobileTab === 'glossary' && <GlossaryPanel bookId={bookId} />}
+              {activeMobileTab === 'goals' && <ReadingGoalsPanel bookId={bookId} totalPages={book?.total_pages} />}
+              {activeMobileTab === 'memorize' && <MemoizationPanel bookId={bookId} />}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MOBILE BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-white border-t flex items-center justify-around px-2 pb-safe shadow-lg">
-          <MobileNavIcon icon={<BookOpen size={20} />} active={activeMobileTab === 'resources'} onClick={() => setActiveMobileTab('resources')} />
-          <MobileNavIcon icon={<FileText size={20} />} active={activeMobileTab === 'notes'} onClick={() => setActiveMobileTab('notes')} />
-          <MobileNavIcon icon={<Bookmark size={20} />} active={activeMobileTab === 'bookmarks'} onClick={() => setActiveMobileTab('bookmarks')} />
-          <MobileNavIcon icon={<Languages size={20} />} active={activeMobileTab === 'glossary'} onClick={() => setActiveMobileTab('glossary')} />
-          <MobileNavIcon icon={<Target size={20} />} active={activeMobileTab === 'goals'} onClick={() => setActiveMobileTab('goals')} />
-          <MobileNavIcon icon={<Mic size={20} />} active={activeMobileTab === 'memorize'} onClick={() => setActiveMobileTab('memorize')} />
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-white border-t flex items-center justify-around px-2 pb-safe shadow-lg">
+          <MobileNavIcon icon={<BookOpen size={20} />} active={activeMobileTab === 'resources'} onClick={() => setActiveMobileTab(activeMobileTab === 'resources' ? null : 'resources')} />
+          <MobileNavIcon icon={<FileText size={20} />} active={activeMobileTab === 'notes'} onClick={() => setActiveMobileTab(activeMobileTab === 'notes' ? null : 'notes')} />
+          <MobileNavIcon icon={<Bookmark size={20} />} active={activeMobileTab === 'bookmarks'} onClick={() => setActiveMobileTab(activeMobileTab === 'bookmarks' ? null : 'bookmarks')} />
+          <MobileNavIcon icon={<Languages size={20} />} active={activeMobileTab === 'glossary'} onClick={() => setActiveMobileTab(activeMobileTab === 'glossary' ? null : 'glossary')} />
+          <MobileNavIcon icon={<Target size={20} />} active={activeMobileTab === 'goals'} onClick={() => setActiveMobileTab(activeMobileTab === 'goals' ? null : 'goals')} />
+          <MobileNavIcon icon={<Mic size={20} />} active={activeMobileTab === 'memorize'} onClick={() => setActiveMobileTab(activeMobileTab === 'memorize' ? null : 'memorize')} />
       </div>
     </div>
   )
