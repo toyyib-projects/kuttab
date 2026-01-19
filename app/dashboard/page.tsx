@@ -1,292 +1,254 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { 
+  LayoutGrid, List, Plus, ChevronLeft, ChevronRight, 
+  Edit2, Trash2, BookOpen, Clock, FileText, Target, LogOut, User as UserIcon
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { BookCard } from "@/components/book-card"
 import { BookUploadDialog } from "@/components/book-upload-dialog"
 import { BookEditDialog } from "@/components/book-edit-dialog"
-import { UserNav } from "@/components/user-nav"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-const CATEGORIES = [
-  "Qur'an",
-  "Hadith",
-  "Fiqh",
-  "Tafsir",
-  "Aqeedah",
-  "Seerah",
-  "Usool Al-Fiqh",
-  "Ilm Al-Hadith",
-  "Arabic Language",
-  "Uloom Al-Qur'an",
-  "Qawaaid Al-fiqhiyyah",
-  "Others"
+export const CATEGORIES = [
+  "Qur'an", "Hadith", "Fiqh", "Tafsir", "Aqeedah", "Seerah",
+  "Usool Al-Fiqh", "Ilm Al-Hadith", "Arabic Language",
+  "Uloom Al-Qur'an", "Qawaaid Al-fiqhiyyah", "Others"
 ]
 
 export default function DashboardPage() {
   const [books, setBooks] = useState<any[]>([])
+  const [profile, setProfile] = useState<{ display_name: string, avatar_url: string } | null>(null)
   const [stats, setStats] = useState({ totalBooks: 0, totalNotes: 0, totalReadingTime: 0, completedGoals: 0 })
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [editingBook, setEditingBook] = useState<any>(null)
-  const router = useRouter()
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
 
+  const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL! || "https://qyfiafodyqmewuijigfm.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5ZmlhZm9keXFtZXd1aWppZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2ODEyODksImV4cCI6MjA4NDI1NzI4OX0.EEQgOLSIjeEA1pv3dCD48M_QgN44EgesTe_HLftbsHs",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF5ZmlhZm9keXFtZXd1aWppZ2ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2ODEyODksImV4cCI6MjA4NDI1NzI4OX0.EEQgOLSIjeEA1pv3dCD48M_QgN44EgesTe_HLftbsHs"
   )
 
   const fetchData = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      setLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push("/auth/login"); return; }
 
-      if (!user) {
-        router.push("/auth/login")
-        return
-      }
+      // 1. Fetch Profile Data (Avatar and Username)
+      const { data: profileData } = await supabase
+        .from("user_profiles")
+        .select("display_name, avatar_url")
+        .eq("id", user.id)
+        .single()
+      
+      if (profileData) setProfile(profileData)
 
-      let query = supabase.from("books").select("*").eq("user_id", user.id)
-
-      if (selectedCategory) {
-        query = query.eq("category", selectedCategory)
-      }
-
-      const { data: booksData } = await query
+      // 2. Fetch Books
+      const { data: booksData } = await supabase
+        .from("books")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
 
       setBooks(booksData || [])
 
-      // Fetch statistics
-      const { data: allBooks } = await supabase.from("books").select("id").eq("user_id", user.id)
-
-      const { data: notesData } = await supabase
-        .from("notes")
-        .select("id")
-        .eq("user_id", user.id)
-
-      const { data: sessionsData } = await supabase
-        .from("reading_sessions")
-        .select("duration_minutes")
-        .eq("user_id", user.id)
-
-      const { data: goalsData } = await supabase
-        .from("reading_goals")
-        .select("id")
-        .eq("user_id", user.id)
-        .not("actual_completion_date", "is", null)
-
-      const totalReadingTime = sessionsData?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0
+      // 3. Fetch Statistics
+      const [notesRes, sessionsRes, goalsRes] = await Promise.all([
+        supabase.from("notes").select("id", { count: "exact" }).eq("user_id", user.id),
+        supabase.from("reading_sessions").select("duration_minutes").eq("user_id", user.id),
+        supabase.from("reading_goals").select("id", { count: "exact" }).eq("user_id", user.id).not("actual_completion_date", "is", null)
+      ])
 
       setStats({
-        totalBooks: allBooks?.length || 0,
-        totalNotes: notesData?.length || 0,
-        totalReadingTime,
-        completedGoals: goalsData?.length || 0,
+        totalBooks: booksData?.length || 0,
+        totalNotes: notesRes.count || 0,
+        totalReadingTime: sessionsRes.data?.reduce((sum, s) => sum + (s.duration_minutes || 0), 0) || 0,
+        completedGoals: goalsRes.count || 0,
       })
-    } catch (err) {
-      console.error("Error fetching data:", err)
-    } finally {
-      setLoading(false)
+    } catch (err) { 
+      console.error(err) 
+    } finally { 
+      setLoading(false) 
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [selectedCategory, supabase, router])
+  useEffect(() => { fetchData() }, [])
 
-  const handleEditBook = (book: any) => {
-    setEditingBook(book)
-  }
+  const filteredBooks = useMemo(() => {
+    return selectedCategory ? books.filter(b => b.category === selectedCategory) : books
+  }, [books, selectedCategory])
 
-  const handleSaveBook = async (updatedData: any) => {
-    try {
-      const { error } = await supabase
-        .from("books")
-        .update(updatedData)
-        .eq("id", editingBook.id)
+  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage)
+  const paginatedBooks = filteredBooks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
-      if (error) throw error
-
-      // Refresh the books list
-      await fetchData()
-      setEditingBook(null)
-    } catch (err) {
-      console.error("Error updating book:", err)
-      throw err
+  const handleDeleteBook = async (id: string) => {
+    if (confirm("Delete this book?")) {
+      await supabase.from("books").delete().eq("id", id)
+      fetchData()
     }
   }
 
-  const handleDeleteBook = async (bookId: string) => {
-    try {
-      // Delete associated data first
-      await supabase.from("notes").delete().eq("book_id", bookId)
-      await supabase.from("reading_sessions").delete().eq("book_id", bookId)
-      await supabase.from("reading_goals").delete().eq("book_id", bookId)
-      
-      // Delete the book
-      const { error } = await supabase.from("books").delete().eq("id", bookId)
-
-      if (error) throw error
-
-      // Refresh the books list
-      await fetchData()
-    } catch (err) {
-      console.error("Error deleting book:", err)
-      alert("Failed to delete book. Please try again.")
-    }
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/auth/login")
   }
-
-  const filteredBooks = selectedCategory ? books.filter((b) => b.category === selectedCategory) : books
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Navigation */}
-      <nav className="bg-card border-b border-border sticky top-0 z-40 shadow-sm">
-        <div className="w-full px-2 sm:px-6 lg:px-8 py-2 sm:py-4">
-          <div className="flex items-center justify-between gap-1 sm:gap-3">
-            <div className="flex items-center gap-1.5 sm:gap-4 min-w-0 flex-1">
-              <Link href="/" className="text-primary hover:opacity-80 transition-opacity flex-shrink-0">
-                <ArrowRight className="w-4 h-4 sm:w-6 sm:h-6 rotate-180" />
-              </Link>
-              <h1 className="text-base sm:text-2xl font-bold text-primary truncate">Kuttab</h1>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
-              <Button 
-                onClick={() => setShowUploadDialog(true)} 
-                className="px-1.5 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-sm bg-primary hover:bg-accent text-primary-foreground whitespace-nowrap transition-colors duration-200 h-7 sm:h-auto"
-              >
-                + Add
-              </Button>
-              <div className="flex-shrink-0 scale-75 sm:scale-100 origin-right">
-                <UserNav />
+    <div className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden">
+      {/* Header / Navbar */}
+      <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          {/* Left Side: Add Book */}
+          <Button 
+            onClick={() => setShowUploadDialog(true)} 
+            className="bg-[#00214d] hover:bg-[#00214d]/90 text-white font-bold rounded-xl px-4 h-10 shadow-lg flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5 stroke-[3px]" />
+            <span className="text-xs sm:text-sm">Add Book</span>
+          </Button>
+
+          {/* Right Side: Interactive Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                <h1 className="text-lg font-black text-[#00214d] uppercase tracking-tight hidden xs:block">
+                  {profile?.display_name || "Username"}
+                </h1>
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-border bg-[#00214d] flex items-center justify-center shadow-sm">
+                  {profile?.avatar_url ? (
+                    <img 
+                      src={profile.avatar_url} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <span className="text-white font-bold text-sm">
+                      {profile?.display_name?.charAt(0).toUpperCase() || "U"}
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
+            </DropdownMenuTrigger>
+            
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              {/* Settings removed per request */}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </nav>
 
-      <div className="w-full px-2 sm:px-6 lg:px-8 py-4 sm:py-8">
-        {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
-          <div className="bg-card border border-border rounded-lg p-2 sm:p-6 shadow-sm hover:border-accent transition-colors duration-200">
-            <p className="text-muted-foreground text-[10px] sm:text-sm font-medium">Books</p>
-            <p className="text-xl sm:text-3xl font-bold text-primary mt-0.5 sm:mt-2">{stats.totalBooks}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-2 sm:p-6 shadow-sm hover:border-accent transition-colors duration-200">
-            <p className="text-muted-foreground text-[10px] sm:text-sm font-medium">Notes</p>
-            <p className="text-xl sm:text-3xl font-bold text-primary mt-0.5 sm:mt-2">{stats.totalNotes}</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-2 sm:p-6 shadow-sm hover:border-accent transition-colors duration-200">
-            <p className="text-muted-foreground text-[10px] sm:text-sm font-medium">Time</p>
-            <p className="text-xl sm:text-3xl font-bold text-primary mt-0.5 sm:mt-2">{Math.round(stats.totalReadingTime)}m</p>
-          </div>
-          <div className="bg-card border border-border rounded-lg p-2 sm:p-6 shadow-sm hover:border-accent transition-colors duration-200">
-            <p className="text-muted-foreground text-[10px] sm:text-sm font-medium">Goals</p>
-            <p className="text-xl sm:text-3xl font-bold text-primary mt-0.5 sm:mt-2">{stats.completedGoals}</p>
-          </div>
-        </div>
-
-        {/* Category Filter */}
-        <div className="mb-4 sm:mb-8">
-          {/* Mobile Dropdown */}
-          <div className="md:hidden">
-            <select
-              value={selectedCategory || ""}
-              onChange={(e) => setSelectedCategory(e.target.value || null)}
-              className="w-full px-3 py-2 text-sm rounded-lg font-medium bg-card border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">All Categories</option>
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          {/* Desktop Buttons */}
-          <div className="hidden md:flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
-                selectedCategory === null 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-muted text-foreground hover:bg-muted/80 border border-border"
-              }`}
-            >
-              All Categories
-            </button>
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors duration-200 ${
-                  selectedCategory === cat 
-                    ? "bg-primary text-primary-foreground" 
-                    : "bg-muted text-foreground hover:bg-muted/80 border border-border"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Books Grid */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-pulse">
-              <div className="h-40 w-40 bg-muted rounded-lg"></div>
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Statistics Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          {[
+            { label: "Books", val: stats.totalBooks, icon: BookOpen },
+            { label: "Notes", val: stats.totalNotes, icon: FileText },
+            { label: "Mins", val: stats.totalReadingTime, icon: Clock },
+            { label: "Goals", val: stats.completedGoals, icon: Target }
+          ].map((s, i) => (
+            <div key={i} className="bg-card p-3 rounded-xl border border-border shadow-sm flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg hidden sm:block">
+                <s.icon className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-[9px] uppercase tracking-tighter text-muted-foreground font-bold">{s.label}</p>
+                <p className="text-lg font-black">{s.val}</p>
+              </div>
             </div>
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div className="flex justify-between items-center gap-4 mb-6">
+          <select
+            value={selectedCategory || ""}
+            onChange={(e) => { setSelectedCategory(e.target.value || null); setCurrentPage(1); }}
+            className="h-9 px-3 text-xs font-bold rounded-lg border border-input bg-card w-full max-w-[150px] sm:max-w-[200px]"
+          >
+            <option value="">Categories</option>
+            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+
+          <div className="flex bg-muted p-1 rounded-lg border border-border">
+            <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-md ${viewMode === "grid" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-md ${viewMode === "list" ? "bg-background shadow-sm text-primary" : "text-muted-foreground"}`}>
+              <List className="w-4 h-4" />
+            </button>
           </div>
-        ) : filteredBooks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">No books found. Start by adding your first book!</p>
-            <Button 
-              onClick={() => setShowUploadDialog(true)} 
-              className="bg-primary hover:bg-accent text-primary-foreground"
-            >
-              Add Your First Book
-            </Button>
+        </div>
+
+        {/* Books Display */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => <div key={i} className="aspect-[3/4] bg-muted animate-pulse rounded-xl" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-            {filteredBooks.map((book) => (
-              <Link key={book.id} href={`/read/${book.id}`}>
-                <BookCard 
-                  book={book} 
-                  onEdit={handleEditBook}
-                  onDelete={handleDeleteBook}
-                />
-              </Link>
+          <div className={viewMode === "grid" 
+            ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" 
+            : "flex flex-col gap-2"
+          }>
+            {paginatedBooks.map((book) => (
+              viewMode === "grid" ? (
+                <div key={book.id} className="w-full max-w-[200px] mx-auto sm:max-w-none">
+                  <Link href={`/read/${book.id}`} className="block h-full">
+                    <BookCard book={book} onEdit={setEditingBook} onDelete={handleDeleteBook} />
+                  </Link>
+                </div>
+              ) : (
+                <div key={book.id} className="flex items-center justify-between p-3 bg-card border rounded-xl shadow-sm">
+                  <Link href={`/read/${book.id}`} className="font-bold text-sm truncate flex-1 pr-4">{book.title}</Link>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => setEditingBook(book)}><Edit2 className="w-4 h-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteBook(book.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                </div>
+              )
             ))}
           </div>
         )}
-      </div>
 
-      {/* Upload Dialog */}
-      {showUploadDialog && (
-        <BookUploadDialog
-          onClose={() => {
-            setShowUploadDialog(false)
-            fetchData()
-          }}
-        />
-      )}
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 mt-10">
+            <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft className="w-4 h-4" /></Button>
+            <span className="text-xs font-bold uppercase tracking-tighter">Page {currentPage} of {totalPages}</span>
+            <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight className="w-4 h-4" /></Button>
+          </div>
+        )}
+      </main>
 
-      {/* Edit Dialog */}
-      {editingBook && (
-        <BookEditDialog
-          book={editingBook}
-          onClose={() => setEditingBook(null)}
-          onSave={handleSaveBook}
-        />
-      )}
+      {showUploadDialog && <BookUploadDialog onClose={() => { setShowUploadDialog(false); fetchData(); }} />}
+      {editingBook && <BookEditDialog book={editingBook} onClose={() => setEditingBook(null)} onSave={fetchData} />}
     </div>
   )
 }
