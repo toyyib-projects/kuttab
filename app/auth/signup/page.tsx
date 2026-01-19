@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 import Link from "next/link"
+import Image from "next/image" // Added missing import
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -97,12 +97,19 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-sm p-8">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">kuttab</h1>
-          <p className="text-muted-foreground mt-2">Create your account</p>
+        <div className="text-center mb-8 flex flex-col items-center">
+          {/* FIXED: Restored consistent Image logo */}
+          <Link href="/" className="hover:opacity-80 transition-opacity mb-4">
+            <Image 
+              src="/logo.png" 
+              alt="Kuttab Logo" 
+              width={120} 
+              height={40} 
+              className="h-8 w-auto object-contain" 
+              priority 
+            />
+          </Link>
+          <p className="text-muted-foreground">Create your account</p>
         </div>
 
         <form onSubmit={handleSignup} className="space-y-4">

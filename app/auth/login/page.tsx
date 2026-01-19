@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-import { BookOpen } from "lucide-react" // Import BookOpen from lucide-react
-
 import { useState } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 import Link from "next/link"
+import Image from "next/image" // FIXED: Added this import
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { BookOpen } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -49,11 +49,18 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md bg-card border border-border rounded-xl shadow-sm p-8">
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-            <BookOpen className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">kuttab</h1>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Link href="/" className="hover:opacity-80 transition-opacity">
+            {/* Logo is now functional with the import above */}
+            <Image 
+              src="/logo.png" 
+              alt="Kuttab Logo" 
+              width={120} 
+              height={40} 
+              className="h-8 w-auto object-contain" 
+              priority 
+            />
+          </Link>
           <p className="text-muted-foreground mt-2">Sign in to your account</p>
         </div>
 
