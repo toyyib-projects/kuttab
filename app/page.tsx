@@ -1,446 +1,297 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { BookOpen, ArrowRight, Menu, Search, Star, Users, Zap, BookMarked, FileText, Target, X } from "lucide-react"
+import { 
+  BookOpen, ArrowRight, Search, BookMarked, 
+  FileText, Target, X, Users, ShoppingBag, 
+  Handshake, ChevronLeft, ChevronRight, RefreshCw, Book, Quote
+} from "lucide-react"
+
+// Utility for Testimonial Highlights
+const Highlight = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <span className={`font-bold bg-secondary/20 text-primary px-1 py-0.5 rounded ${className}`}>
+    {children}
+  </span>
+);
 
 export default function Home() {
   const router = useRouter()
-  const [showVideo, setShowVideo] = useState(false)
+  
+  // --- Salaf Quotes Logic ---
+  const [currentQuote, setCurrentQuote] = useState(0)
+  const quotes = [
+    { quote: "Knowledge is not what is memorized. Knowledge is what benefits.", author: "Imam Ash-Shafi'i", bio: "d. 204 AH" },
+    { quote: "If I were to say that I have seen a man who has memorized all the knowledge in the world, I would not be lying.", author: "Ibn al-Mubarak", bio: "d. 181 AH" },
+    { quote: "The one who does not have a book in his pocket, wisdom will not settle in his heart.", author: "Al-Jahiz", bio: "d. 255 AH" }
+  ]
+
+  // --- How to Read Logic ---
+  const [flippedCards, setFlippedCards] = useState<number[]>([])
+  const [mobileStep, setMobileStep] = useState(0)
+  const [currentReadSlide, setCurrentReadSlide] = useState(0)
+
+  const readingSteps = [
+    { id: 0, step: "01", title: "Niyyah", front: "The Foundation", back: "Purify your intention. Start with a prayer for beneficial knowledge ($Ilm Nafi')." },
+    { id: 1, step: "02", title: "Taharah", front: "Outer Readiness", back: "Approach your books in a state of Wudu to show respect for the sacred text." },
+    { id: 2, step: "03", title: "Active Reading", front: "Engagement", back: "Don't just scan. Interrogate the text. Why did the author choose this specific word?" },
+    { id: 3, step: "04", title: "Annotation", front: "The Hashiyah", back: "Write your own notes in the margins. This links your thought process to the text." },
+    { id: 4, step: "05", title: "Glossary", front: "Vocabulary", back: "Record every unfamiliar word. A master of a science is a master of its terminology." },
+    { id: 5, step: "06", title: "Review", front: "The Muraja'ah", back: "Knowledge is like a wild animal; it must be tied down through constant revision." }
+  ]
+
+  const toggleFlip = (id: number) => {
+    setFlippedCards(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation */}
+    <div className="min-h-screen bg-background text-foreground scroll-smooth font-sans">
+      {/* 1. Navigation */}
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-primary">kuttab</span>
+          <Link href="/" className="hover:opacity-80 transition-opacity">
+            <Image src="/logo.png" alt="Kuttab Logo" width={120} height={40} className="h-8 w-auto object-contain" priority />
           </Link>
-
           <div className="hidden md:flex items-center gap-8">
+            <Link href="#features" className="text-sm font-medium hover:text-primary transition-colors">Features</Link>
+            <Link href="#how-to-read" className="text-sm font-medium hover:text-primary transition-colors">Methodology</Link>
+            <Link href="#community" className="text-sm font-medium hover:text-primary transition-colors">Community</Link>
           </div>
-
-          <button 
-            onClick={() => router.push("/auth/login")}
-            className="hidden md:block px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
-          >
+          <button onClick={() => router.push("/auth/login")} className="px-5 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity">
             Sign In
-          </button>
-
-          <button className="md:hidden p-2">
-            <Menu className="w-5 h-5" />
           </button>
         </div>
       </nav>
 
-      {/* Hero Section - Large background */}
-      <section className="bg-secondary text-secondary-foreground min-h-screen flex items-center py-12 md:py-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-            {/* Left content */}
-            <div className="space-y-6 md:space-y-8">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
-                Deep Learning with Purpose
-              </h1>
-              
-              <p className="text-base md:text-lg opacity-95">
-                A thoughtfully designed platform for serious students of knowledge and learners to read, annotate, and master Islamic texts.
-              </p>
-
-              {/* Search bar */}
-              <div className="flex items-center gap-2 bg-white rounded-full p-2 max-w-md">
-                <Search className="w-5 h-5 text-gray-400 ml-3" />
-                <input 
-                  type="text"
-                  placeholder="Search Islamic texts..."
-                  className="flex-1 px-2 py-2 outline-none bg-transparent text-primary placeholder-gray-400 text-sm md:text-base"
-                />
-                <button className="bg-primary text-primary-foreground p-2 rounded-full hover:opacity-90 transition-opacity">
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2">
-                {["Quranic Studies", "Hadith", "Fiqh", "Aqeedah"].map((tag) => (
-                  <button
-                    key={tag}
-                    className="px-3 py-1 md:px-4 md:py-1 bg-white/20 hover:bg-white/30 rounded-full text-xs md:text-sm transition-colors"
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-2 md:pt-4">
-                <button 
-                  onClick={() => router.push("/auth/signup")}
-                  className="px-6 md:px-8 py-2.5 md:py-3 bg-white text-primary rounded-lg hover:opacity-90 transition-opacity font-medium text-sm md:text-base flex items-center justify-center gap-2"
-                >
-                  Get started <ArrowRight className="w-4 h-4" />
-                </button>
-                <button 
-                  onClick={() => setShowVideo(true)}
-                  className="px-6 md:px-8 py-2.5 md:py-3 border-2 border-white rounded-lg hover:bg-white/10 transition-colors font-medium text-sm md:text-base"
-                >
-                  Learn More
-                </button>
-              </div>
-
-              {/* Social proof */}
-              <div className="pt-8 md:pt-12">
-                <div className="flex items-center gap-4">
-                  <div className="flex -space-x-2">
-                    {[1,2,3,4,5].map((i) => (
-                      <div key={i} className="w-6 h-6 md:w-8 md:h-8 bg-white/30 rounded-full border-2 border-white"></div>
-                    ))}
-                  </div>
-                  <p className="text-xs md:text-sm">
-                    <span className="font-bold">Join thousands</span> of readers
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Right side - Hero image/illustration - Hidden on mobile */}
-            <div className="hidden md:flex items-center justify-end">
-              <div className="relative w-full h-64 lg:h-80 bg-gradient-to-br from-white/20 to-white/5 rounded-3xl flex items-center justify-center border-2 border-white/30">
-                <div className="text-center space-y-4">
-                  <div className="w-20 h-20 bg-white/20 rounded-full mx-auto flex items-center justify-center">
-                    <BookOpen className="w-10 h-10 text-white" />
-                  </div>
-                  <p className="text-white font-semibold text-sm">Read With Purpose</p>
-                </div>
-              </div>
+      {/* 2. Hero Section */}
+      <section className="bg-secondary text-secondary-foreground py-24 px-4">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6 text-center md:text-left">
+            <h1 className="text-5xl md:text-7xl font-bold leading-tight">Deep Learning with Purpose</h1>
+            <p className="text-lg opacity-90 max-w-lg mx-auto md:mx-0">A platform for serious students of knowledge to read, annotate, and master Islamic texts.</p>
+            <div className="flex items-center gap-2 bg-white rounded-full p-2 max-w-md shadow-lg mx-auto md:mx-0">
+              <Search className="w-5 h-5 text-gray-400 ml-3" />
+              <input type="text" placeholder="Search Islamic texts..." className="flex-1 px-2 py-2 outline-none bg-transparent text-primary placeholder:text-gray-400" />
+              <button className="bg-primary text-primary-foreground p-2 rounded-full hover:scale-105 transition-transform"><ArrowRight className="w-5 h-5" /></button>
             </div>
           </div>
+          <div className="hidden md:block h-80 bg-white/10 rounded-[2rem] border border-white/20 backdrop-blur-sm" />
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 bg-background">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6">Excellent Reader</h2>
-            <p className="text-base md:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Everything you need to engage deeply with Islamic texts. Advanced tools designed for scholars, students, and lifelong learners.
-            </p>
-          </div>
+      {/* 3. The Kuttab Method (Corrected Stack Section) */}
+      <section id="how-to-read" className="py-24 bg-muted/20 px-4 overflow-hidden">
+        <div className="max-w-7xl mx-auto text-center mb-16">
+          <h2 className="text-4xl font-bold text-primary mb-4">The Kuttab Method</h2>
+          <p className="text-muted-foreground">Mastery through dedicated tradition.</p>
+        </div>
 
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {[
-              {
-                icon: BookMarked,
-                title: "Upload & Organize",
-                desc: "Add PDFs directly or link to online resources. Build your personal Islamic library with ease."
-              },
-              {
-                icon: FileText,
-                title: "Rich Annotations",
-                desc: "Highlight, underline, and add detailed notes. Create interactive margins for deep engagement."
-              },
-              {
-                icon: Target,
-                title: "Reading Goals",
-                desc: "Set intentional goals, track progress, and celebrate milestones. Stay motivated on your journey."
-              },
-              {
-                icon: Star,
-                title: "Personal Glossary",
-                desc: "Build a glossary of new terms and concepts. Strengthen your Islamic vocabulary progressively."
-              },
-              {
-                icon: Zap,
-                title: "Track Progress",
-                desc: "Monitor reading time, pages completed, and learning streaks. Measure meaningful progress."
-              },
-              {
-                icon: Users,
-                title: "Community",
-                desc: "Share resources, insights, and reflections with fellow readers worldwide."
-              }
-            ].map((feature, i) => (
-              <div key={i} className="bg-white rounded-xl p-6 md:p-8 border border-border hover:border-secondary hover:shadow-lg transition-all group">
-                <feature.icon className="w-10 h-10 md:w-12 md:h-12 text-secondary mb-4 group-hover:scale-110 transition-transform" />
-                <h3 className="text-lg md:text-xl font-bold mb-3 text-primary">{feature.title}</h3>
-                <p className="text-sm md:text-base text-muted-foreground leading-relaxed">{feature.desc}</p>
-              </div>
-            ))}
+        {/* Mobile View: Aceternity Stack */}
+        <div className="md:hidden flex flex-col items-center">
+          <div className="relative h-[400px] w-full max-w-[300px]">
+            {readingSteps.map((card, index) => {
+              const distance = index - mobileStep;
+              const isActive = index === mobileStep;
+              const isBehind = index > mobileStep && index <= mobileStep + 2;
+              const isVisible = isActive || isBehind;
+
+              return (
+                <div
+                  key={card.id}
+                  onClick={() => isActive && toggleFlip(card.id)}
+                  style={{
+                    zIndex: readingSteps.length - index,
+                    transform: isVisible 
+                      ? `translateY(${distance * -15}px) scale(${1 - distance * 0.05})`
+                      : `translateY(20px) scale(0.9)`,
+                    opacity: isVisible ? 1 - distance * 0.2 : 0,
+                  }}
+                  className={`absolute inset-0 transition-all duration-500 transform-style-3d ${isActive ? "cursor-pointer" : "pointer-events-none"} ${flippedCards.includes(card.id) ? "rotate-y-180" : ""}`}
+                >
+                  <div className="absolute inset-0 bg-white border border-border rounded-2xl p-8 flex flex-col justify-between backface-hidden shadow-xl">
+                    <div>
+                      <span className="text-4xl font-black text-secondary/20">{card.step}</span>
+                      <h3 className="text-2xl font-bold mt-4 text-primary">{card.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-2">{card.front}</p>
+                    </div>
+                    {isActive && <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse"><RefreshCw size={14} /> Tap to flip</div>}
+                  </div>
+                  <div className="absolute inset-0 h-full w-full rounded-2xl bg-secondary p-8 text-secondary-foreground rotate-y-180 backface-hidden flex items-center justify-center text-center shadow-xl">
+                    <p className="text-lg italic leading-relaxed">{card.back}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-10 mt-10 items-center">
+            <button onClick={() => mobileStep > 0 && setMobileStep(m => m - 1)} className={`p-4 bg-white rounded-full shadow-lg ${mobileStep === 0 ? 'opacity-20' : 'opacity-100'}`}><ChevronLeft /></button>
+            <span className="font-bold text-primary">{mobileStep + 1} / 6</span>
+            <button onClick={() => mobileStep < 5 && setMobileStep(m => m + 1)} className={`p-4 bg-white rounded-full shadow-lg ${mobileStep === 5 ? 'opacity-20' : 'opacity-100'}`}><ChevronRight /></button>
           </div>
         </div>
-      </section>
 
-      {/* Who Uses Kuttab */}
-      <section id="about" className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 bg-primary text-primary-foreground">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold mb-12 md:mb-16 text-center">Who Uses Kuttab</h2>
-          
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            {[
-              {
-                title: "Islamic Scholars",
-                desc: "Access comprehensive texts, maintain detailed research notes, and build knowledge progressively."
-              },
-              {
-                title: "University Students",
-                desc: "Study Quranic sciences, Islamic history, and jurisprudence with advanced annotation tools."
-              },
-              {
-                title: "Lifelong Learners",
-                desc: "Embark on a meaningful Islamic learning journey with structured resources and community support."
-              },
-              {
-                title: "Memorization Seekers",
-                desc: "Record recitations, track memorization progress, and verify accuracy with original texts."
-              },
-              {
-                title: "Arabic Enthusiasts",
-                desc: "Master Arabic vocabulary, study classical texts, and understand linguistic nuances deeply."
-              },
-               {
-                title: "Researchers",
-                desc: "Access materials across platforms, work on any device, and engage your books anywhere."
-              }
-            ].map((user, i) => (
-              <div key={i} className="bg-white/10 backdrop-blur rounded-xl p-6 border border-white/20 hover:bg-white/20 transition-colors">
-                <h3 className="text-lg md:text-xl font-bold mb-3">{user.title}</h3>
-                <p className="opacity-95 text-sm md:text-base">{user.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Kuttab - Carousel Section */}
-      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 bg-background">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6 text-center">Why Use Kuttab</h2>
-          <p className="text-center text-muted-foreground mb-12 md:mb-16 max-w-2xl mx-auto text-sm md:text-base">
-            Wisdom from the Salaf on the importance of reading and learning
-          </p>
-
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-            {[
-              {
-                quote: "The best of you are those who learn the Quran and teach it.",
-                author: "Prophet Muhammad (ﷺ)"
-              },
-              {
-                quote: "Seeking knowledge is a duty upon every Muslim.",
-                author: "Prophet Muhammad (ﷺ)"
-              },
-              {
-                quote: "Knowledge is three things: a verse that is to be read, a Sunnah that is to be followed, and a tradition that is to be learned.",
-                author: "Ibn Abbas (رضي الله عنهما)"
-              },
-              {
-                quote: "The scholars are the heirs of the Prophets.",
-                author: "Abu Daud"
-              }
-            ].map((item, i) => (
-              <div key={i} className="bg-gradient-to-br from-secondary to-primary rounded-xl p-6 md:p-8 text-secondary-foreground border border-secondary/30 transform hover:scale-105 transition-transform cursor-default">
-                <p className="text-base md:text-lg font-semibold mb-4 leading-relaxed">"{item.quote}"</p>
-                <p className="text-xs md:text-sm opacity-90">— {item.author}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Reviews Section */}
-      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 bg-muted/30">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl md:text-5xl font-bold mb-12 md:mb-16 text-center">What Kuttab Users Say</h2>
-
-          <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-            {[
-              {
-                name: "Fatimah Al-Rashid",
-                role: "Quranic Studies Scholar",
-                review: "Kuttab transformed how I engage with Islamic texts. The annotation tools are incredibly intuitive, and the community aspect has deepened my understanding immensely.",
-                rating: 5
-              },
-              {
-                name: "Hassan Muhammad",
-                role: "Islamic Law Student",
-                review: "As a law student, I needed a platform that could handle complex texts with detailed notes. Kuttab exceeded all my expectations with its thoughtful design.",
-                rating: 5
-              },
-              {
-                name: "Aisha Malik",
-                role: "Independent Learner",
-                review: "This platform made my Islamic learning journey structured and meaningful. The reading goals feature keeps me motivated and accountable.",
-                rating: 5
-              }
-            ].map((review, i) => (
-              <div key={i} className="bg-white rounded-xl p-6 md:p-8 border border-border shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex gap-1 mb-4">
-                  {[...Array(review.rating)].map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+        {/* Desktop View: Slides */}
+        <div className="hidden md:block max-w-6xl mx-auto relative px-12">
+          <div className="overflow-hidden py-8">
+            <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentReadSlide * 100}%)` }}>
+              {[readingSteps.slice(0, 3), readingSteps.slice(3, 6)].map((slideCards, slideIdx) => (
+                <div key={slideIdx} className="min-w-full grid grid-cols-3 gap-8 px-4">
+                  {slideCards.map((card) => (
+                    <div key={card.id} className="h-[380px] perspective-1000">
+                      <div onClick={() => toggleFlip(card.id)} className={`relative h-full w-full rounded-2xl transition-all duration-500 transform-style-3d cursor-pointer shadow-sm ${flippedCards.includes(card.id) ? 'rotate-y-180' : ''}`}>
+                        <div className="absolute inset-0 bg-white border border-border rounded-2xl p-8 flex flex-col justify-between backface-hidden">
+                          <div><span className="text-4xl font-black text-secondary/20">{card.step}</span><h3 className="text-xl font-bold mt-4 text-primary">{card.title}</h3></div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><RefreshCw size={14} /> Flip</div>
+                        </div>
+                        <div className="absolute inset-0 h-full w-full rounded-2xl bg-secondary p-8 text-secondary-foreground rotate-y-180 backface-hidden flex items-center justify-center text-center p-6 shadow-inner"><p className="text-md italic leading-relaxed">{card.back}</p></div>
+                      </div>
+                    </div>
                   ))}
                 </div>
-                <p className="text-muted-foreground mb-6 italic text-sm md:text-base">"{review.review}"</p>
+              ))}
+            </div>
+          </div>
+          <button onClick={() => setCurrentReadSlide(0)} className={`absolute left-0 top-1/2 -translate-y-1/2 p-3 bg-white shadow-xl rounded-full ${currentReadSlide === 0 ? 'opacity-30' : 'opacity-100'}`}><ChevronLeft /></button>
+          <button onClick={() => setCurrentReadSlide(1)} className={`absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-white shadow-xl rounded-full ${currentReadSlide === 1 ? 'opacity-30' : 'opacity-100'}`}><ChevronRight /></button>
+        </div>
+      </section>
+
+      {/* 4. Testimonials (New Section based on your demo) */}
+      {/* <section className="py-24 bg-white px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-4 mb-12">
+            <div className="w-12 h-1 px-0 bg-primary rounded-full" />
+            <h2 className="text-2xl font-bold text-primary">Student Stories</h2>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="p-8 bg-muted/30 rounded-3xl border border-border/50">
+              <Quote className="w-10 h-10 text-primary/20 mb-4" />
+              <p className="text-lg leading-relaxed mb-6">
+                Kuttab has completely changed how I approach <Highlight>classical texts</Highlight>. The annotation features allow me to preserve the <Highlight>Hashiyah</Highlight> just like the students of old did.
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-secondary rounded-full" />
                 <div>
-                  <p className="font-bold text-primary text-sm md:text-base">{review.name}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{review.role}</p>
+                  <h4 className="font-bold text-primary">Zaid Al-Farsi</h4>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest">Fiqh Student</p>
                 </div>
               </div>
-            ))}
+            </div>
+            <div className="p-8 bg-muted/30 rounded-3xl border border-border/50">
+              <Quote className="w-10 h-10 text-primary/20 mb-4" />
+              <p className="text-lg leading-relaxed mb-6">
+                I never thought a digital platform could feel this <Highlight>sacred and focused</Highlight>. It’s more than a reader; it’s a digital <Highlight>Madrasah</Highlight> for my personal library.
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-secondary rounded-full" />
+                <div>
+                  <h4 className="font-bold text-primary">Maryam Siddiqui</h4>
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest">Arabic Scholar</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section> */}
+
+      {/* 5. Salaf Quotes Carousel */}
+      <section id="quotes" className="py-24 bg-primary text-primary-foreground text-center relative overflow-hidden">
+        <div className="max-w-4xl mx-auto px-4">
+          <Book className="w-12 h-12 mx-auto text-secondary mb-8 opacity-50" />
+          <div className="relative min-h-[300px] flex items-center justify-center">
+            <button onClick={() => setCurrentQuote(prev => (prev - 1 + quotes.length) % quotes.length)} className="absolute left-0 p-2 hover:bg-white/10 rounded-full"><ChevronLeft size={32}/></button>
+            <div key={currentQuote} className="px-12 animate-fade-in">
+              <p className="text-2xl md:text-3xl font-serif italic mb-6 leading-relaxed">"{quotes[currentQuote].quote}"</p>
+              <h4 className="text-xl font-bold text-secondary">{quotes[currentQuote].author}</h4>
+              <p className="text-sm opacity-60 tracking-widest uppercase">{quotes[currentQuote].bio}</p>
+            </div>
+            <button onClick={() => setCurrentQuote(prev => (prev + 1) % quotes.length)} className="absolute right-0 p-2 hover:bg-white/10 rounded-full"><ChevronRight size={32}/></button>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="px-4 sm:px-6 lg:px-8 py-16 md:py-20 bg-primary text-primary-foreground">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 md:mb-6">Get Started With Kuttab</h2>
-          <p className="text-base md:text-lg opacity-95 mb-8 md:mb-12 max-w-2xl mx-auto">
-            Join thousands of Readers transforming their understanding of Islamic knowledge through purposeful reading.
+      {/* 6. Community Section (Restored Cards) */}
+      <section id="community" className="px-4 py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-20 relative z-10">
+            <span className="px-4 py-1.5 bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest rounded-full">Coming Soon</span>
+            <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6 text-primary">Community</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">We are building a space where knowledge is shared and students connect.</p>
+          </div>
+          
+          <div className="relative min-h-[450px]">
+            {/* Restored Background Cards */}
+            <div className="grid md:grid-cols-3 gap-8 opacity-20 grayscale pointer-events-none">
+              <div className="p-8 bg-white rounded-2xl border border-border flex flex-col items-center text-center">
+                <Users className="w-10 h-10 text-primary mb-4" />
+                <h3 className="text-xl font-bold mb-2">Share Materials</h3>
+                <p className="text-sm text-muted-foreground">Collaborate on study guides and summaries with students globally.</p>
+              </div>
+              <div className="p-8 bg-white rounded-2xl border border-border flex flex-col items-center text-center">
+                <Handshake className="w-10 h-10 text-primary mb-4" />
+                <h3 className="text-xl font-bold mb-2">Borrow Books</h3>
+                <p className="text-sm text-muted-foreground">A peer-to-peer system for lending physical copies within your city.</p>
+              </div>
+              <div className="p-8 bg-white rounded-2xl border border-border flex flex-col items-center text-center">
+                <ShoppingBag className="w-10 h-10 text-primary mb-4" />
+                <h3 className="text-xl font-bold mb-2">Marketplace</h3>
+                <p className="text-sm text-muted-foreground">Buy and sell used classical texts to fellow students worldwide.</p>
+              </div>
+            </div>
+
+            {/* Waitlist Overlay */}
+            <div className="absolute inset-0 flex items-center justify-center z-20">
+              <div className="bg-white border border-primary/20 p-8 md:p-10 rounded-3xl shadow-2xl text-center max-w-md mx-4">
+                <h4 className="text-2xl font-black text-primary mb-2">Join the Waitlist</h4>
+                <p className="text-sm text-muted-foreground mb-8">Get notified as soon as the Community Hub launches.</p>
+                <div className="flex flex-col gap-3">
+                  <input type="email" placeholder="Enter your email" className="w-full px-4 py-3 rounded-xl border border-border text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all" />
+                  <button className="bg-primary text-primary-foreground py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">Notify Me</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Footer */}
+      <footer className="bg-background border-t border-border py-16 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
+          <div className="flex flex-col items-center md:items-start gap-4">
+            <Image src="/logo.png" alt="Kuttab" width={120} height={40} />
+            <p className="text-sm text-muted-foreground max-w-xs text-center md:text-left">
+              Preserving the tradition of Islamic learning through modern technology.
+            </p>
+          </div>
+          <div className="flex gap-12 text-sm font-medium">
+            <div className="flex flex-col gap-4">
+              <span className="text-primary font-bold uppercase tracking-wider text-xs">Platform</span>
+              <Link href="#features" className="hover:text-primary transition-colors">Features</Link>
+              <Link href="#how-to-read" className="hover:text-primary transition-colors">Methodology</Link>
+            </div>
+            <div className="flex flex-col gap-4">
+              <span className="text-primary font-bold uppercase tracking-wider text-xs">Support</span>
+              <Link href="#" className="hover:text-primary transition-colors">Contact</Link>
+              <Link href="#" className="hover:text-primary transition-colors">Privacy</Link>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-border text-center">
+          <p className="text-xs text-muted-foreground tracking-widest uppercase">
+            © 2026 Kuttab Learning. Made for the seekers of knowledge.
           </p>
-          <button 
-            onClick={() => router.push("/auth/signup")}
-            className="px-8 md:px-10 py-3 md:py-4 bg-white text-primary rounded-lg hover:opacity-90 transition-opacity font-bold text-base md:text-lg inline-flex items-center gap-2"
-          >
-            Create Your Account <ArrowRight className="w-5 h-5" />
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-background border-t border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-          <div className="grid md:grid-cols-4 gap-8 md:gap-12 mb-8 md:mb-12">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <span className="font-bold text-primary">kuttab</span>
-              </div>
-              <p className="text-xs md:text-sm text-muted-foreground">Deep learning. Meaningful study. Islamic mastery.</p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 text-sm md:text-base">Explore</h4>
-              <ul className="space-y-2 text-xs md:text-sm">
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    Resources
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    Guide
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 text-sm md:text-base">Community</h4>
-              <ul className="space-y-2 text-xs md:text-sm">
-                <li>
-                  <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    Discussions
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    Contributors
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 text-sm md:text-base">Company</h4>
-              <ul className="space-y-2 text-xs md:text-sm">
-                <li>
-                  <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-muted-foreground hover:text-primary transition-colors">
-                    Privacy
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-6 md:pt-8 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
-            <p className="text-xs md:text-sm text-muted-foreground">© 2026 kuttab. All rights reserved.</p>
-            <div className="flex gap-6">
-              <Link href="#" className="text-xs md:text-sm text-muted-foreground hover:text-primary transition-colors">
-                Twitter
-              </Link>
-              <Link href="#" className="text-xs md:text-sm text-muted-foreground hover:text-primary transition-colors">
-                Instagram
-              </Link>
-              <Link href="#" className="text-xs md:text-sm text-muted-foreground hover:text-primary transition-colors">
-                YouTube
-              </Link>
-            </div>
-          </div>
         </div>
       </footer>
 
-      {/* Video Modal */}
-      {showVideo && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-card rounded-xl shadow-lg max-w-2xl w-full max-h-96 overflow-hidden animate-scale-in">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <h3 className="text-lg font-semibold text-primary">Learn About Kuttab</h3>
-              <button
-                onClick={() => setShowVideo(false)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="relative w-full bg-muted" style={{ aspectRatio: "16 / 9" }}>
-              <iframe
-                width="100%"
-                height="100%"
-                src="https://www.youtube.com/embed/f0zo00sZJH4"
-                title="Kuttab - Learn More"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.2s ease-in-out;
-        }
-        .animate-scale-in {
-          animation: scaleIn 0.2s ease-in-out;
-        }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
       `}</style>
     </div>
   )
