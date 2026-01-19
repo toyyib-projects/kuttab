@@ -10,7 +10,6 @@ import {
   Handshake, ChevronLeft, ChevronRight, RefreshCw, Book, Quote
 } from "lucide-react"
 
-// Utility for Testimonial Highlights
 const Highlight = ({ children, className }: { children: React.ReactNode; className?: string }) => (
   <span className={`font-bold bg-secondary/20 text-primary px-1 py-0.5 rounded ${className}`}>
     {children}
@@ -19,8 +18,6 @@ const Highlight = ({ children, className }: { children: React.ReactNode; classNa
 
 export default function Home() {
   const router = useRouter()
-  
-  // --- Salaf Quotes Logic ---
   const [currentQuote, setCurrentQuote] = useState(0)
   const quotes = [
     { quote: "Knowledge is not what is memorized. Knowledge is what benefits.", author: "Imam Ash-Shafi'i", bio: "d. 204 AH" },
@@ -28,8 +25,7 @@ export default function Home() {
     { quote: "The one who does not have a book in his pocket, wisdom will not settle in his heart.", author: "Al-Jahiz", bio: "d. 255 AH" }
   ]
 
-  // --- How to Read Logic ---
-  const [flippedCards, setFlippedCards] = useState<number[]>([])
+  const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({})
   const [mobileStep, setMobileStep] = useState(0)
   const [currentReadSlide, setCurrentReadSlide] = useState(0)
 
@@ -43,12 +39,14 @@ export default function Home() {
   ]
 
   const toggleFlip = (id: number) => {
-    setFlippedCards(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
+    setFlippedCards(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }))
   }
 
   return (
     <div className="min-h-screen bg-background text-foreground scroll-smooth font-sans">
-      {/* 1. Navigation */}
       <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <Link href="/" className="hover:opacity-80 transition-opacity">
@@ -65,7 +63,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* 2. Hero Section */}
       <section className="bg-secondary text-secondary-foreground py-24 px-4">
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 text-center md:text-left">
@@ -81,36 +78,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 3. The Kuttab Method (Corrected Stack Section) */}
       <section id="how-to-read" className="py-24 bg-muted/20 px-4 overflow-hidden">
         <div className="max-w-7xl mx-auto text-center mb-16">
           <h2 className="text-4xl font-bold text-primary mb-4">The Kuttab Method</h2>
           <p className="text-muted-foreground">Mastery through dedicated tradition.</p>
         </div>
 
-        {/* Mobile View: Aceternity Stack */}
+        {/* Mobile View */}
         <div className="md:hidden flex flex-col items-center">
           <div className="relative h-[400px] w-full max-w-[300px]">
             {readingSteps.map((card, index) => {
               const distance = index - mobileStep;
               const isActive = index === mobileStep;
-              const isBehind = index > mobileStep && index <= mobileStep + 2;
-              const isVisible = isActive || isBehind;
+              const isVisible = index >= mobileStep && index <= mobileStep + 2;
 
               return (
                 <div
                   key={card.id}
-                  onClick={() => isActive && toggleFlip(card.id)}
+                  onPointerDown={(e) => {
+                    if (isActive) {
+                      e.preventDefault();
+                      toggleFlip(card.id);
+                    }
+                  }}
                   style={{
-                    zIndex: readingSteps.length - index,
+                    zIndex: isActive ? 50 : 10 - index,
                     transform: isVisible 
-                      ? `translateY(${distance * -15}px) scale(${1 - distance * 0.05})`
+                      ? `translateY(${distance * -15}px) scale(${1 - distance * 0.05}) ${flippedCards[card.id] ? 'rotateY(180deg)' : 'rotateY(0deg)'}`
                       : `translateY(20px) scale(0.9)`,
                     opacity: isVisible ? 1 - distance * 0.2 : 0,
+                    pointerEvents: isActive ? 'auto' : 'none',
+                    transition: 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease',
+                    transformStyle: 'preserve-3d',
+                    WebkitTransformStyle: 'preserve-3d'
                   }}
-                  className={`absolute inset-0 transition-all duration-500 transform-style-3d ${isActive ? "cursor-pointer" : "pointer-events-none"} ${flippedCards.includes(card.id) ? "rotate-y-180" : ""}`}
+                  className="absolute inset-0 cursor-pointer"
                 >
-                  <div className="absolute inset-0 bg-white border border-border rounded-2xl p-8 flex flex-col justify-between backface-hidden shadow-xl">
+                  <div className="absolute inset-0 bg-white border border-border rounded-2xl p-8 flex flex-col justify-between backface-hidden shadow-xl" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                     <div>
                       <span className="text-4xl font-black text-secondary/20">{card.step}</span>
                       <h3 className="text-2xl font-bold mt-4 text-primary">{card.title}</h3>
@@ -118,7 +122,7 @@ export default function Home() {
                     </div>
                     {isActive && <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse"><RefreshCw size={14} /> Tap to flip</div>}
                   </div>
-                  <div className="absolute inset-0 h-full w-full rounded-2xl bg-secondary p-8 text-secondary-foreground rotate-y-180 backface-hidden flex items-center justify-center text-center shadow-xl">
+                  <div className="absolute inset-0 h-full w-full rounded-2xl bg-secondary p-8 text-secondary-foreground backface-hidden flex items-center justify-center text-center shadow-xl" style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                     <p className="text-lg italic leading-relaxed">{card.back}</p>
                   </div>
                 </div>
@@ -132,7 +136,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Desktop View: Slides */}
+        {/* Desktop View */}
         <div className="hidden md:block max-w-6xl mx-auto relative px-12">
           <div className="overflow-hidden py-8">
             <div className="flex transition-transform duration-700 ease-in-out" style={{ transform: `translateX(-${currentReadSlide * 100}%)` }}>
@@ -140,12 +144,18 @@ export default function Home() {
                 <div key={slideIdx} className="min-w-full grid grid-cols-3 gap-8 px-4">
                   {slideCards.map((card) => (
                     <div key={card.id} className="h-[380px] perspective-1000">
-                      <div onClick={() => toggleFlip(card.id)} className={`relative h-full w-full rounded-2xl transition-all duration-500 transform-style-3d cursor-pointer shadow-sm ${flippedCards.includes(card.id) ? 'rotate-y-180' : ''}`}>
-                        <div className="absolute inset-0 bg-white border border-border rounded-2xl p-8 flex flex-col justify-between backface-hidden">
+                      <div 
+                        onPointerDown={() => toggleFlip(card.id)} 
+                        className="relative h-full w-full rounded-2xl transition-all duration-500 transform-style-3d cursor-pointer shadow-sm"
+                        style={{ transform: flippedCards[card.id] ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
+                      >
+                        <div className="absolute inset-0 bg-white border border-border rounded-2xl p-8 flex flex-col justify-between backface-hidden" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
                           <div><span className="text-4xl font-black text-secondary/20">{card.step}</span><h3 className="text-xl font-bold mt-4 text-primary">{card.title}</h3></div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><RefreshCw size={14} /> Flip</div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium"><RefreshCw size={14} /> Click to Flip</div>
                         </div>
-                        <div className="absolute inset-0 h-full w-full rounded-2xl bg-secondary p-8 text-secondary-foreground rotate-y-180 backface-hidden flex items-center justify-center text-center p-6 shadow-inner"><p className="text-md italic leading-relaxed">{card.back}</p></div>
+                        <div className="absolute inset-0 h-full w-full rounded-2xl bg-secondary p-8 text-secondary-foreground backface-hidden flex items-center justify-center text-center p-6 shadow-inner" style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+                          <p className="text-md italic leading-relaxed">{card.back}</p>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -158,45 +168,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4. Testimonials (New Section based on your demo) */}
-      {/* <section className="py-24 bg-white px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-4 mb-12">
-            <div className="w-12 h-1 px-0 bg-primary rounded-full" />
-            <h2 className="text-2xl font-bold text-primary">Student Stories</h2>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="p-8 bg-muted/30 rounded-3xl border border-border/50">
-              <Quote className="w-10 h-10 text-primary/20 mb-4" />
-              <p className="text-lg leading-relaxed mb-6">
-                Kuttab has completely changed how I approach <Highlight>classical texts</Highlight>. The annotation features allow me to preserve the <Highlight>Hashiyah</Highlight> just like the students of old did.
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-secondary rounded-full" />
-                <div>
-                  <h4 className="font-bold text-primary">Zaid Al-Farsi</h4>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest">Fiqh Student</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-8 bg-muted/30 rounded-3xl border border-border/50">
-              <Quote className="w-10 h-10 text-primary/20 mb-4" />
-              <p className="text-lg leading-relaxed mb-6">
-                I never thought a digital platform could feel this <Highlight>sacred and focused</Highlight>. It’s more than a reader; it’s a digital <Highlight>Madrasah</Highlight> for my personal library.
-              </p>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-secondary rounded-full" />
-                <div>
-                  <h4 className="font-bold text-primary">Maryam Siddiqui</h4>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest">Arabic Scholar</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section> */}
-
-      {/* 5. Salaf Quotes Carousel */}
       <section id="quotes" className="py-24 bg-primary text-primary-foreground text-center relative overflow-hidden">
         <div className="max-w-4xl mx-auto px-4">
           <Book className="w-12 h-12 mx-auto text-secondary mb-8 opacity-50" />
@@ -212,7 +183,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 6. Community Section (Restored Cards) */}
       <section id="community" className="px-4 py-24 bg-muted/30">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20 relative z-10">
@@ -220,9 +190,7 @@ export default function Home() {
             <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6 text-primary">Community</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-lg">We are building a space where knowledge is shared and students connect.</p>
           </div>
-          
           <div className="relative min-h-[450px]">
-            {/* Restored Background Cards */}
             <div className="grid md:grid-cols-3 gap-8 opacity-20 grayscale pointer-events-none">
               <div className="p-8 bg-white rounded-2xl border border-border flex flex-col items-center text-center">
                 <Users className="w-10 h-10 text-primary mb-4" />
@@ -240,8 +208,6 @@ export default function Home() {
                 <p className="text-sm text-muted-foreground">Buy and sell used classical texts to fellow students worldwide.</p>
               </div>
             </div>
-
-            {/* Waitlist Overlay */}
             <div className="absolute inset-0 flex items-center justify-center z-20">
               <div className="bg-white border border-primary/20 p-8 md:p-10 rounded-3xl shadow-2xl text-center max-w-md mx-4">
                 <h4 className="text-2xl font-black text-primary mb-2">Join the Waitlist</h4>
@@ -256,7 +222,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 7. Footer */}
       <footer className="bg-background border-t border-border py-16 px-4">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-10">
           <div className="flex flex-col items-center md:items-start gap-4">
@@ -285,11 +250,19 @@ export default function Home() {
         </div>
       </footer>
 
-      <style jsx>{`
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
+      <style jsx global>{`
+        .perspective-1000 { 
+          perspective: 1000px; 
+          -webkit-perspective: 1000px;
+        }
+        .transform-style-3d { 
+          transform-style: preserve-3d; 
+          -webkit-transform-style: preserve-3d;
+        }
+        .backface-hidden { 
+          backface-visibility: hidden; 
+          -webkit-backface-visibility: hidden;
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
       `}</style>
