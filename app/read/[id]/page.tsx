@@ -85,10 +85,9 @@ export default function ReadPage() {
     initSession()
   }, [bookId, supabase, router])
 
-  // 2. SAVING LOGIC (Using your "updated_at" column)
+  // 2. SAVING LOGIC
   useEffect(() => {
     if (loading || !bookId) return
-
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
     setSaveStatus('saving')
 
@@ -106,7 +105,6 @@ export default function ReadPage() {
         }, { onConflict: 'book_id,user_id' })
 
       if (error) {
-        console.error("Sync Failed:", error.message)
         setSaveStatus('idle')
       } else {
         setSaveStatus('saved')
@@ -130,6 +128,12 @@ export default function ReadPage() {
     if (bookId && !loading) checkIndicators()
   }, [currentPage, bookId, supabase, loading])
 
+  // 4. LOCK SCROLL
+  useEffect(() => {
+    if (activeMobileTab) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = 'unset'
+  }, [activeMobileTab])
+
   const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(newPage)
   }, [])
@@ -141,7 +145,6 @@ export default function ReadPage() {
       : `/api/proxy-pdf?url=${encodeURIComponent(book.pdf_url)}`
   }, [book?.pdf_url])
 
-  // Return Skeleton while loading
   if (loading) return <LoadingSkeleton />
 
   return (
@@ -156,11 +159,7 @@ export default function ReadPage() {
           </button>
           
           <div className="flex items-center gap-1.5">
-            {saveStatus === 'saving' ? (
-              <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" />
-            ) : saveStatus === 'saved' ? (
-              <Check className="w-3.5 h-3.5 text-green-500" />
-            ) : null}
+            {saveStatus === 'saving' ? <RefreshCw className="w-3.5 h-3.5 text-blue-500 animate-spin" /> : saveStatus === 'saved' ? <Check className="w-3.5 h-3.5 text-green-500" /> : null}
             <span className="text-[10px] text-slate-400 font-bold uppercase hidden sm:block">
               {saveStatus === 'saving' ? 'Syncing' : saveStatus === 'saved' ? 'Saved' : 'Online'}
             </span>
@@ -168,9 +167,7 @@ export default function ReadPage() {
         </div>
         
         <div className="flex-[2] text-center">
-          <h1 className="font-bold text-slate-800 truncate text-sm px-2">
-            {book?.title}
-          </h1>
+          <h1 className="font-bold text-slate-800 truncate text-sm px-2">{book?.title}</h1>
         </div>
 
         <div className="flex-1 flex justify-end">
@@ -181,12 +178,21 @@ export default function ReadPage() {
       </nav>
 
       <Tabs defaultValue="notes" className="flex flex-1 overflow-hidden">
-        <main className="flex flex-1 flex-row overflow-hidden p-2 md:p-4 gap-4 pb-20 lg:pb-4">
+        <main className="flex flex-1 flex-row overflow-hidden p-2 md:p-4 gap-4 pb-16 lg:pb-4">
           <section className="flex-[3] h-full flex flex-col relative min-w-0">
-            {/* INDICATORS OVERLAY */}
-            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-               {hasBookmark && <div className="text-orange-500 bg-white p-1.5 rounded-full border shadow-sm"><Bookmark size={18} fill="currentColor" /></div>}
-               {hasNotes && <div className="text-blue-600 bg-white p-1.5 rounded-full border shadow-sm"><StickyNote size={18} /></div>}
+            
+            {/* CENTERED INDICATORS OVERLAY - MOVED FROM TOP-RIGHT */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-2 pointer-events-none">
+               {hasBookmark && (
+                 <div className="text-orange-500 bg-white/90 backdrop-blur-md p-2 rounded-full border shadow-lg animate-in zoom-in">
+                    <Bookmark size={20} fill="currentColor" />
+                 </div>
+               )}
+               {hasNotes && (
+                 <div className="text-blue-600 bg-white/90 backdrop-blur-md p-2 rounded-full border shadow-lg animate-in zoom-in">
+                    <StickyNote size={20} />
+                 </div>
+               )}
             </div>
 
             <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -198,6 +204,7 @@ export default function ReadPage() {
             </div>
           </section>
 
+          {/* DESKTOP ASIDE */}
           <aside className="hidden lg:flex flex-[1] max-w-[400px] h-full flex-col shrink-0 overflow-hidden">
             <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
               <TabsList className="flex w-full h-11 bg-slate-50 border-b rounded-none p-1 gap-1">
@@ -221,23 +228,26 @@ export default function ReadPage() {
         </main>
       </Tabs>
 
-      {/* MOBILE PANEL MODAL */}
+      {/* MOBILE PANEL MODAL - IMPROVED CENTERING AND HEIGHT */}
       {activeMobileTab && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 flex items-end">
-          <div className="bg-white w-full rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="font-bold text-slate-800 capitalize">{activeMobileTab}</h2>
-              <button 
-                onClick={() => setActiveMobileTab(null)}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end justify-center p-4">
+          <div className="absolute inset-0" onClick={() => setActiveMobileTab(null)} />
+          
+          <div 
+            className="bg-white w-full max-w-lg rounded-3xl shadow-2xl relative flex flex-col animate-in fade-in slide-in-from-bottom-10 duration-300 mb-20"
+            style={{ maxHeight: 'calc(100vh - 200px)' }}
+          >
+            {/* Grabber */}
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-4 mb-1 shrink-0" />
+
+            <div className="flex items-center justify-between px-6 py-4 border-b">
+              <h2 className="font-extrabold text-slate-800 capitalize tracking-tight">{activeMobileTab}</h2>
+              <button onClick={() => setActiveMobileTab(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
                 <X size={20} className="text-slate-600" />
               </button>
             </div>
             
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-6">
               {activeMobileTab === 'resources' && <ResourcesPanel bookId={bookId} />}
               {activeMobileTab === 'notes' && <NotesPanel bookId={bookId} currentPage={currentPage} bookTitle={book?.title} />}
               {activeMobileTab === 'bookmarks' && <BookmarksPanel bookId={bookId} onBookmarkClick={(page) => { handlePageChange(page); setActiveMobileTab(null); }} />}
@@ -249,8 +259,8 @@ export default function ReadPage() {
         </div>
       )}
 
-      {/* MOBILE BAR */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-white border-t flex items-center justify-around px-2 pb-safe shadow-lg">
+      {/* MOBILE NAV BAR */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-white/90 backdrop-blur-lg border-t flex items-center justify-around px-2 pb-safe shadow-[0_-8px_30px_rgb(0,0,0,0.08)]">
           <MobileNavIcon icon={<BookOpen size={20} />} active={activeMobileTab === 'resources'} onClick={() => setActiveMobileTab(activeMobileTab === 'resources' ? null : 'resources')} />
           <MobileNavIcon icon={<FileText size={20} />} active={activeMobileTab === 'notes'} onClick={() => setActiveMobileTab(activeMobileTab === 'notes' ? null : 'notes')} />
           <MobileNavIcon icon={<Bookmark size={20} />} active={activeMobileTab === 'bookmarks'} onClick={() => setActiveMobileTab(activeMobileTab === 'bookmarks' ? null : 'bookmarks')} />
@@ -270,6 +280,11 @@ function PanelIconTrigger({ value, icon }: { value: string, icon: React.ReactNod
 
 function MobileNavIcon({ icon, active, onClick }: { icon: React.ReactNode, active: boolean, onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`p-3 rounded-2xl transition-all ${active ? 'bg-blue-600 text-white shadow-lg -translate-y-2' : 'text-slate-400'}`}>{icon}</button>
+    <button 
+      onClick={onClick} 
+      className={`p-3 rounded-2xl transition-all duration-300 ${active ? 'bg-blue-600 text-white shadow-xl -translate-y-2 scale-110' : 'text-slate-400 hover:text-slate-600'}`}
+    >
+      {icon}
+    </button>
   )
 }
